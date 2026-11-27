@@ -1,0 +1,633 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Calculadora Básica de Contraste de Hipótesis</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  /* Layout: formulario de pasos a la izquierda; a la derecha el veredicto, las lecturas y la curva sobre papel milimetrado. */
+  --bg:#EAEFF4;
+  --panel:#F8FAFC;
+  --field:#FFFFFF;
+  --ink:#101C33;
+  --ink-2:#51607A;
+  --rule:#CBD5E1;
+  --rule-strong:#9FB0C5;
+  --accent:#2346D9;
+  --accent-ink:#FFFFFF;
+  --rej:#C2253F;
+  --rej-bg:#FBE7EB;
+  --keep:#14796A;
+  --keep-bg:#E2F3EF;
+  --on-sem:#FFFFFF;
+  --grid:#D9E1EA;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1522;--panel:#131E30;--field:#0D1522;--ink:#E8EEF7;--ink-2:#9FB0C8;
+    --rule:#27364E;--rule-strong:#3D5170;--accent:#8AA2FF;--accent-ink:#0D1522;
+    --rej:#FF7A8E;--rej-bg:#3A1823;--keep:#52D6B8;--keep-bg:#11322C;--on-sem:#0D1522;--grid:#1D2B41;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1522;--panel:#131E30;--field:#0D1522;--ink:#E8EEF7;--ink-2:#9FB0C8;
+  --rule:#27364E;--rule-strong:#3D5170;--accent:#8AA2FF;--accent-ink:#0D1522;
+  --rej:#FF7A8E;--rej-bg:#3A1823;--keep:#52D6B8;--keep-bg:#11322C;--on-sem:#0D1522;--grid:#1D2B41;
+  color-scheme:dark;
+}
+
+body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--body)}
+*{box-sizing:border-box}
+.wrap{
+  max-width:1180px;margin:0 auto;padding-block:32px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+
+/* Encabezado */
+.top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px 24px;margin-bottom:28px}
+h1{font:700 clamp(30px,5.2vw,52px)/1 var(--display);letter-spacing:-.025em;margin:0 0 10px;text-wrap:balance}
+.sub{margin:0;color:var(--ink-2);max-width:48ch}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:500 13px var(--body);padding:9px 14px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink);border-radius:4px;cursor:pointer;transition:background .15s}
+.btn:hover{background:var(--panel)}
+.btn:focus-visible,.cta:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Rejilla principal */
+.app{display:grid;grid-template-columns:minmax(0,410px) minmax(0,1fr);gap:28px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:6px}
+.results{display:grid;gap:20px;min-width:0}
+@media (min-width:901px) and (min-height:760px){.results{position:sticky;top:16px}}
+@media (max-width:900px){.app{grid-template-columns:minmax(0,1fr)}}
+
+/* Pasos del formulario */
+.step{display:grid;grid-template-columns:26px minmax(0,1fr);gap:0 12px;padding:18px 16px;border-top:1px solid var(--rule)}
+.step:first-child{border-top:0}
+.num{width:26px;height:26px;border:1px solid var(--rule-strong);border-radius:50%;display:grid;place-items:center;font:500 12px var(--mono);color:var(--ink-2)}
+.step-body{display:grid;gap:14px;min-width:0}
+.step-title{margin:0;font:700 17px/26px var(--display);letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.conf{font:500 12px var(--mono);color:var(--ink-2)}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field{display:grid;gap:6px;min-width:0;align-content:start}
+.field>label{font-size:13px;color:var(--ink-2)}
+.in{display:flex;border:1px solid var(--rule-strong);border-radius:4px;background:var(--field);min-width:0}
+.in:focus-within{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.sym{min-width:38px;display:grid;place-items:center;border-right:1px solid var(--rule);font:500 14px var(--mono);color:var(--ink-2);padding:0 8px}
+.in input{flex:1;min-width:0;height:42px;border:0;outline:0;background:transparent;color:var(--ink);font:500 16px var(--mono);padding:0 10px;font-variant-numeric:tabular-nums}
+.in input::placeholder{color:var(--ink-2);opacity:.55}
+.hint{margin:0;font:400 12px/1.4 var(--mono);color:var(--ink-2);min-height:17px}
+
+/* Controles segmentados */
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:3px;padding:3px;border:1px solid var(--rule-strong);border-radius:6px;background:var(--bg)}
+.opt{position:relative;min-width:0}
+.opt input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.opt label{display:grid;gap:2px;justify-items:center;text-align:center;padding:8px 6px;border-radius:4px;color:var(--ink);pointer-events:none}
+.opt b{font:500 18px/1.15 var(--mono)}
+.opt small{font-size:12px;line-height:1.25;color:var(--ink-2)}
+.opt input:checked + label{background:var(--accent);color:var(--accent-ink)}
+.opt input:checked + label small{color:var(--accent-ink);opacity:.9}
+.opt input:focus-visible + label{outline:2px solid var(--accent);outline-offset:2px}
+.hyp{margin:0;padding:10px 12px;border:1px dashed var(--rule-strong);border-radius:4px;font:500 14px var(--mono);color:var(--ink);overflow-wrap:anywhere}
+.hyp i{font-style:normal;color:var(--ink-2);padding:0 6px}
+.note{margin:0;font-size:13px;color:var(--ink-2)}
+.submit{padding:16px;border-top:1px solid var(--rule);display:grid;gap:12px}
+.cta{height:48px;border:0;border-radius:4px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--body);cursor:pointer;transition:filter .15s}
+.cta:hover{filter:brightness(1.08)}
+
+/* Resultados */
+.empty{padding:28px 20px;display:grid;justify-items:center;gap:14px;text-align:center;color:var(--ink-2)}
+.empty svg{width:160px;height:auto}
+.empty p{margin:0;max-width:34ch}
+.empty.err{border-color:var(--rej)}
+.empty.err p{color:var(--ink)}
+.stale-note{margin:0;padding:8px 12px;border:1px solid var(--rule-strong);border-radius:4px;font-size:13px;color:var(--ink-2);background:var(--panel)}
+.out{display:grid;gap:20px;min-width:0}
+.out.stale .verdict,.out.stale .readout,.out.stale .interp,.out.stale .plot{opacity:.45}
+
+.verdict{display:flex;align-items:center;gap:16px;padding:18px;border:1px solid var(--rej);border-radius:6px;background:var(--rej-bg)}
+.verdict[data-state="keep"]{border-color:var(--keep);background:var(--keep-bg)}
+.vicon{flex:none;width:56px;height:56px;display:grid;place-items:center;border-radius:4px;background:var(--rej);color:var(--on-sem)}
+.verdict[data-state="keep"] .vicon{background:var(--keep)}
+.vicon svg{width:28px;height:28px}
+.verdict[data-state="reject"] .i-keep,.verdict[data-state="keep"] .i-rej{display:none}
+.vtitle{margin:0;font:700 clamp(26px,4.2vw,40px)/1.05 var(--display);letter-spacing:-.02em;color:var(--rej)}
+.verdict[data-state="keep"] .vtitle{color:var(--keep)}
+.vtitle sub{font-size:.55em;line-height:0;vertical-align:baseline;position:relative;top:.28em}
+.vsub{margin:4px 0 0;color:var(--ink)}
+
+.readout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule)}
+.readout>div{padding:14px 14px 14px 0;min-width:0}
+.readout>div+div{padding-left:16px;border-left:1px solid var(--rule)}
+.readout dt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.readout dd{margin:4px 0 0;font:500 clamp(22px,3.4vw,32px)/1.15 var(--mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+@media (max-width:520px){
+  .readout{grid-template-columns:minmax(0,1fr)}
+  .readout>div+div{padding-left:0;border-left:0;border-top:1px solid var(--rule)}
+  .readout>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-right:0}
+  .readout dd{margin:0}
+}
+.interp{margin:0;max-width:62ch}
+.warn{margin:0;padding:10px 12px;border:1px solid var(--rule-strong);border-radius:4px;font-size:13px;color:var(--ink-2)}
+
+.plot{padding:16px 12px 8px;min-width:0}
+.plot-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px 16px;padding:0 4px 8px}
+.plot-head h2{margin:0;font:700 17px/1.2 var(--display);letter-spacing:-.01em}
+.legend{list-style:none;margin:0;padding:0;display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.legend li{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:10px;border:1px solid var(--rej);background:var(--rej);opacity:.9}
+.sw.k{border-color:var(--keep);background:var(--keep)}
+.sw.s{height:0;border:0;border-top:2px dashed var(--ink);background:none}
+#chart{min-width:0}
+#chart svg{display:block;width:100%;height:auto}
+#chart .g{stroke:var(--grid);stroke-width:1}
+#chart .g0{stroke:var(--rule-strong)}
+#chart .ax{stroke:var(--ink);stroke-width:1.25}
+#chart .fr{fill:var(--rej);fill-opacity:.32}
+#chart .fk{fill:var(--keep);fill-opacity:.16}
+#chart .curve{stroke:var(--ink);stroke-width:1.75;fill:none;stroke-linejoin:round}
+#chart .cl{stroke:var(--rej);stroke-width:1.5}
+#chart .ct{fill:var(--rej)}
+#chart .sl{stroke:var(--ink);stroke-width:1.25;stroke-dasharray:4 3}
+#chart .dot{fill:var(--ink);stroke:var(--panel);stroke-width:2}
+#chart text{font-family:var(--mono);font-size:12px;fill:var(--ink-2)}
+#chart text.tc{fill:var(--rej);font-weight:500}
+#chart text.ts{fill:var(--ink);font-weight:500}
+
+.foot{margin:28px 0 0;font-size:12px;color:var(--ink-2)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Contraste de Hipótesis</h1>
+      <p class="sub">Calculadora estadística básica: Media (Z / t) y Proporción (Z)</p>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn" id="ex">Cargar Ejemplo</button>
+      <button type="button" class="btn" id="clr">Limpiar</button>
+    </div>
+  </header>
+
+  <div class="app">
+    <form id="f" class="panel" novalidate autocomplete="off">
+      <section class="step">
+        <span class="num" aria-hidden="true">1</span>
+        <div class="step-body">
+          <h3 class="step-title" id="t1">¿Qué deseas contrastar?</h3>
+          <div class="seg" role="radiogroup" aria-labelledby="t1">
+            <span class="opt"><input type="radio" name="mode" id="mode-mean" value="mean" checked><label for="mode-mean"><b>μ</b><small>Media poblacional</small></label></span>
+            <span class="opt"><input type="radio" name="mode" id="mode-prop" value="prop"><label for="mode-prop"><b>p</b><small>Proporción</small></label></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="step">
+        <span class="num" aria-hidden="true">2</span>
+        <div class="step-body">
+          <h3 class="step-title" id="t2">Hipótesis</h3>
+          <div class="field" data-mode="mean">
+            <label for="mu0">Valor nulo (μ₀)</label>
+            <div class="in"><span class="sym">μ₀</span><input id="mu0" inputmode="decimal" placeholder="50"></div>
+          </div>
+          <div class="field" data-mode="prop" hidden>
+            <label for="p0">Valor nulo (p₀)</label>
+            <div class="in"><span class="sym">p₀</span><input id="p0" inputmode="decimal" placeholder="0.50"></div>
+          </div>
+          <div class="field">
+            <label id="tailLabel">Tipo de prueba (H₁)</label>
+            <div class="seg" role="radiogroup" aria-labelledby="tailLabel">
+              <span class="opt"><input type="radio" name="tail" id="tail-two" value="two" checked><label for="tail-two"><b>≠</b><small>Bilateral</small></label></span>
+              <span class="opt"><input type="radio" name="tail" id="tail-right" value="right"><label for="tail-right"><b>&gt;</b><small>Cola derecha</small></label></span>
+              <span class="opt"><input type="radio" name="tail" id="tail-left" value="left"><label for="tail-left"><b>&lt;</b><small>Cola izquierda</small></label></span>
+            </div>
+          </div>
+          <p class="hyp" id="hyp" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="step">
+        <span class="num" aria-hidden="true">3</span>
+        <div class="step-body">
+          <h3 class="step-title" id="t3">Datos de la muestra</h3>
+
+          <div class="step-body" data-mode="mean">
+            <div class="row2">
+              <div class="field">
+                <label for="xbar">Media muestral</label>
+                <div class="in"><span class="sym">x̄</span><input id="xbar" inputmode="decimal" placeholder="52.35"></div>
+              </div>
+              <div class="field">
+                <label for="nMean">Tamaño de muestra</label>
+                <div class="in"><span class="sym">n</span><input id="nMean" inputmode="numeric" placeholder="100"></div>
+              </div>
+            </div>
+            <div class="field">
+              <label id="knownLabel">Desviación estándar</label>
+              <div class="seg" role="radiogroup" aria-labelledby="knownLabel">
+                <span class="opt"><input type="radio" name="known" id="known-yes" value="yes" checked><label for="known-yes"><b>σ</b><small>Conocida · usa Z</small></label></span>
+                <span class="opt"><input type="radio" name="known" id="known-no" value="no"><label for="known-no"><b>s</b><small>Desconocida · usa t</small></label></span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="sd" id="sdLabel">Desviación estándar poblacional</label>
+              <div class="in"><span class="sym" id="sdSym">σ</span><input id="sd" inputmode="decimal" placeholder="10"></div>
+            </div>
+          </div>
+
+          <div class="step-body" data-mode="prop" hidden>
+            <div class="row2">
+              <div class="field">
+                <label for="xSucc">Éxitos en la muestra</label>
+                <div class="in"><span class="sym">x</span><input id="xSucc" inputmode="numeric" placeholder="62"></div>
+              </div>
+              <div class="field">
+                <label for="nProp">Tamaño de muestra</label>
+                <div class="in"><span class="sym">n</span><input id="nProp" inputmode="numeric" placeholder="100"></div>
+              </div>
+            </div>
+            <p class="hint" id="phat" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="step">
+        <span class="num" aria-hidden="true">4</span>
+        <div class="step-body">
+          <h3 class="step-title" id="t4">Nivel de significancia (α) <span class="conf" id="conf">Confianza: 95%</span></h3>
+          <div class="seg" role="radiogroup" aria-labelledby="t4">
+            <span class="opt"><input type="radio" name="alpha" id="a1" value="0.01"><label for="a1"><b>1%</b><small>α = 0.01</small></label></span>
+            <span class="opt"><input type="radio" name="alpha" id="a5" value="0.05" checked><label for="a5"><b>5%</b><small>α = 0.05</small></label></span>
+            <span class="opt"><input type="radio" name="alpha" id="a10" value="0.10"><label for="a10"><b>10%</b><small>α = 0.10</small></label></span>
+          </div>
+        </div>
+      </section>
+
+      <div class="submit">
+        <p class="note" id="exnote" hidden>Datos de ejemplo cargados. Cámbialos y vuelve a calcular.</p>
+        <button type="submit" class="cta">Calcular Contraste</button>
+      </div>
+    </form>
+
+    <section class="results" id="result" aria-live="polite">
+      <div class="empty panel" id="empty" hidden>
+        <svg viewBox="0 0 160 70" aria-hidden="true" fill="none" stroke="var(--rule-strong)" stroke-width="2" stroke-linecap="round"><path d="M4 62H156"/><path d="M8 62C40 62 52 10 80 10S120 62 152 62"/></svg>
+        <p id="emptyMsg">Ingresa los datos y presiona <b>Calcular Contraste</b> (o pulsa “Cargar Ejemplo”).</p>
+      </div>
+
+      <div class="out" id="out" hidden>
+        <p class="stale-note" id="stale" hidden>Cambiaste los datos. Presiona Calcular Contraste para actualizar el resultado.</p>
+
+        <div class="verdict" id="verdict" data-state="reject">
+          <span class="vicon" aria-hidden="true">
+            <svg class="i-rej" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M6 6L22 22M22 6L6 22"/></svg>
+            <svg class="i-keep" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="3.5"><circle cx="14" cy="14" r="9"/></svg>
+          </span>
+          <div>
+            <p class="vtitle" id="vtitle">Se rechaza H<sub>0</sub></p>
+            <p class="vsub" id="vsub">Existe evidencia estadística significativa</p>
+          </div>
+        </div>
+
+        <dl class="readout">
+          <div><dt id="statLabel">Estadístico Z</dt><dd id="statVal">–</dd></div>
+          <div><dt>Valor Crítico</dt><dd id="critVal">–</dd></div>
+          <div><dt>p-valor</dt><dd id="pVal">–</dd></div>
+        </dl>
+
+        <p class="interp" id="interp"></p>
+        <p class="warn" id="warn" hidden></p>
+
+        <div class="plot panel">
+          <div class="plot-head">
+            <h2>Distribución y Región de Rechazo</h2>
+            <ul class="legend">
+              <li><span class="sw"></span>Rechazo (α)</li>
+              <li><span class="sw k"></span>No rechazo</li>
+              <li><span class="sw s"></span>Estadístico</li>
+            </ul>
+          </div>
+          <div id="chart"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <p class="foot">Calculadora de Contraste de Hipótesis Básica • Estadística</p>
+</div>
+
+<script>
+/*MATH-START*/
+// Distribución normal acumulada (Hart/West, precisión doble)
+function cnd(x){
+  var a=Math.abs(x),C;
+  if(a>37){C=0;}
+  else{
+    var e=Math.exp(-a*a/2);
+    if(a<7.07106781186547){
+      var b=3.52624965998911E-02*a+0.700383064443688;
+      b=b*a+6.37396220353165;b=b*a+33.912866078383;b=b*a+112.079291497871;
+      b=b*a+221.213596169931;b=b*a+220.206867912376;
+      C=e*b;
+      var d=8.83883476483184E-02*a+1.75566716318264;
+      d=d*a+16.064177579207;d=d*a+86.7807322029461;d=d*a+296.564248779674;
+      d=d*a+637.333633378831;d=d*a+793.826512519948;d=d*a+440.413735824752;
+      C=C/d;
+    }else{
+      var f=a+0.65;f=a+4/f;f=a+3/f;f=a+2/f;f=a+1/f;
+      C=e/f/2.506628274631;
+    }
+  }
+  return x>0?1-C:C;
+}
+function lgamma(x){
+  var g=7,c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(x<0.5)return Math.log(Math.PI/Math.sin(Math.PI*x))-lgamma(1-x);
+  x-=1;var a=c[0],t=x+g+0.5;
+  for(var i=1;i<g+2;i++)a+=c[i]/(x+i);
+  return 0.5*Math.log(2*Math.PI)+(x+0.5)*Math.log(t)-t+Math.log(a);
+}
+function betacf(a,b,x){
+  var MAXIT=300,EPS=3e-14,FPMIN=1e-300;
+  var qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap;
+  if(Math.abs(d)<FPMIN)d=FPMIN;
+  d=1/d;var h=d;
+  for(var m=1;m<=MAXIT;m++){
+    var m2=2*m,aa=m*(b-m)*x/((qam+m2)*(a+m2));
+    d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;
+    c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;
+    d=1/d;h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+    d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;
+    c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;
+    d=1/d;var del=d*c;h*=del;
+    if(Math.abs(del-1)<EPS)break;
+  }
+  return h;
+}
+function betai(x,a,b){
+  if(x<=0)return 0;
+  if(x>=1)return 1;
+  var bt=Math.exp(lgamma(a+b)-lgamma(a)-lgamma(b)+a*Math.log(x)+b*Math.log(1-x));
+  return x<(a+1)/(a+b+2)?bt*betacf(a,b,x)/a:1-bt*betacf(b,a,1-x)/b;
+}
+function tUpper(t,df){
+  var p=0.5*betai(df/(df+t*t),df/2,0.5);
+  return t>=0?p:1-p;
+}
+function dist(kind,df){
+  if(kind==='z'){
+    return{upper:function(z){return cnd(-z);},pdf:function(z){return Math.exp(-z*z/2)/Math.sqrt(2*Math.PI);}};
+  }
+  var lc=lgamma((df+1)/2)-lgamma(df/2)-0.5*Math.log(df*Math.PI);
+  return{upper:function(t){return tUpper(t,df);},pdf:function(t){return Math.exp(lc-(df+1)/2*Math.log(1+t*t/df));}};
+}
+// q >= 0 tal que P(X > q) = p, con 0 < p <= 0.5
+function upperQuantile(d,p){
+  var lo=0,hi=1;
+  while(d.upper(hi)>p&&hi<1e8)hi*=2;
+  for(var i=0;i<200;i++){
+    var mid=(lo+hi)/2;
+    if(d.upper(mid)>p)lo=mid;else hi=mid;
+  }
+  return(lo+hi)/2;
+}
+function runTest(o){
+  var kind,df=null,stat;
+  if(o.mode==='mean'){
+    stat=(o.xb-o.mu0)/(o.sd/Math.sqrt(o.n));
+    kind=o.known?'z':'t';
+    df=o.known?null:o.n-1;
+  }else{
+    stat=(o.x/o.n-o.p0)/Math.sqrt(o.p0*(1-o.p0)/o.n);
+    kind='z';
+  }
+  var d=dist(kind,df),crit,p;
+  if(o.tail==='two'){
+    crit=upperQuantile(d,o.alpha/2);
+    p=Math.min(1,2*d.upper(Math.abs(stat)));
+  }else if(o.tail==='right'){
+    crit=upperQuantile(d,o.alpha);
+    p=d.upper(stat);
+  }else{
+    crit=-upperQuantile(d,o.alpha);
+    p=d.upper(-stat);
+  }
+  return{kind:kind,df:df,stat:stat,crit:crit,p:p,reject:p<o.alpha,tail:o.tail,alpha:o.alpha,mode:o.mode,d:d};
+}
+/*MATH-END*/
+
+(function(){
+  var MINUS='−';
+  function $(id){return document.getElementById(id);}
+  function val(name){var el=document.querySelector('input[name="'+name+'"]:checked');return el?el.value:'';}
+  function parseNum(s){
+    s=String(s==null?'':s).trim().replace(',','.');
+    if(s==='')return NaN;
+    return Number(s);
+  }
+  function fmt(x){
+    var s=parseFloat(Math.abs(x).toFixed(3)).toString();
+    return(x<0&&parseFloat(s)!==0?MINUS:'')+s;
+  }
+  function fmtP(p){return p<0.0001?'< 0.0001':p.toFixed(4);}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  var last=null;
+
+  function updateHyp(){
+    var mode=val('mode'),sym=mode==='mean'?'μ':'p';
+    var raw=$(mode==='mean'?'mu0':'p0').value.trim();
+    var v=raw||(sym+'₀');
+    var op={two:'≠',right:'>',left:'<'}[val('tail')];
+    $('hyp').innerHTML='H₀: '+sym+' = '+esc(v)+'<i>•</i>H₁: '+sym+' '+op+' '+esc(v);
+  }
+  function updateLabels(){
+    var mode=val('mode'),known=val('known')==='yes';
+    document.querySelectorAll('[data-mode]').forEach(function(el){el.hidden=el.getAttribute('data-mode')!==mode;});
+    $('sdLabel').textContent=known?'Desviación estándar poblacional':'Desviación estándar muestral';
+    $('sdSym').textContent=known?'σ':'s';
+    $('conf').textContent='Confianza: '+Math.round((1-parseFloat(val('alpha')))*100)+'%';
+  }
+  function updatePhat(){
+    var x=parseNum($('xSucc').value),n=parseNum($('nProp').value),h=$('phat');
+    h.textContent=(Number.isInteger(x)&&Number.isInteger(n)&&n>0&&x>=0&&x<=n)?'p̂ = '+parseFloat((x/n).toFixed(4)):'';
+  }
+
+  function readInputs(){
+    var mode=val('mode'),tail=val('tail'),alpha=parseFloat(val('alpha'));
+    if(mode==='mean'){
+      var mu0=parseNum($('mu0').value),xb=parseNum($('xbar').value),n=parseNum($('nMean').value),sd=parseNum($('sd').value),known=val('known')==='yes';
+      if(!isFinite(mu0))return{error:'Ingresa el valor nulo μ₀.'};
+      if(!isFinite(xb))return{error:'Ingresa la media muestral x̄.'};
+      if(!Number.isInteger(n)||n<(known?1:2))return{error:known?'El tamaño de muestra n debe ser un entero positivo.':'Con desviación desconocida, n debe ser un entero de al menos 2.'};
+      if(!isFinite(sd)||sd<=0)return{error:'Ingresa una desviación estándar ('+(known?'σ':'s')+') mayor que 0.'};
+      return{mode:mode,tail:tail,alpha:alpha,mu0:mu0,xb:xb,n:n,sd:sd,known:known};
+    }
+    var p0=parseNum($('p0').value),x=parseNum($('xSucc').value),np=parseNum($('nProp').value);
+    if(!isFinite(p0)||p0<=0||p0>=1)return{error:'El valor nulo p₀ debe estar entre 0 y 1, sin incluir 0 ni 1.'};
+    if(!Number.isInteger(np)||np<1)return{error:'El tamaño de muestra n debe ser un entero positivo.'};
+    if(!Number.isInteger(x)||x<0||x>np)return{error:'Los éxitos x deben ser un entero entre 0 y n.'};
+    return{mode:mode,tail:tail,alpha:alpha,p0:p0,x:x,n:np};
+  }
+
+  function showEmpty(msg,isErr){
+    var e=$('empty');
+    e.hidden=false;
+    e.classList.toggle('err',!!isErr);
+    $('out').hidden=true;
+    if(isErr){$('emptyMsg').textContent='Revisa los datos. '+msg;}
+    else{$('emptyMsg').innerHTML='Ingresa los datos y presiona <b>Calcular Contraste</b> (o pulsa “Cargar Ejemplo”).';}
+  }
+
+  function render(r,o){
+    $('empty').hidden=true;
+    var out=$('out');
+    out.hidden=false;
+    out.classList.remove('stale');
+    $('stale').hidden=true;
+    $('verdict').setAttribute('data-state',r.reject?'reject':'keep');
+    $('vtitle').innerHTML=(r.reject?'Se rechaza':'No se rechaza')+' H<sub>0</sub>';
+    $('vsub').textContent=r.reject?'Existe evidencia estadística significativa':'No existe evidencia estadística suficiente';
+    $('statLabel').textContent=r.kind==='z'?'Estadístico Z':'Estadístico t · gl = '+r.df;
+    $('statVal').textContent=fmt(r.stat);
+    $('critVal').textContent=(r.tail==='two'?'±':'')+fmt(r.crit);
+    $('pVal').textContent=fmtP(r.p);
+    var a=r.alpha.toFixed(2);
+    $('interp').textContent=r.reject
+      ?'El estadístico cae en la región de rechazo y el p-valor ('+fmtP(r.p)+') es menor que α = '+a+'.'
+      :'El estadístico queda fuera de la región de rechazo y el p-valor ('+fmtP(r.p)+') no es menor que α = '+a+'.';
+    var w=$('warn');
+    if(r.mode==='prop'&&(o.n*o.p0<10||o.n*(1-o.p0)<10)){
+      w.hidden=false;
+      w.textContent='Con estos datos la aproximación normal es poco fiable: conviene que n·p₀ y n·(1 − p₀) sean al menos 10.';
+    }else{w.hidden=true;}
+    last=r;
+    drawChart(r);
+  }
+
+  function calc(scroll){
+    var o=readInputs();
+    if(o.error){last=null;showEmpty(o.error,true);return;}
+    var r=runTest(o);
+    render(r,o);
+    if(scroll&&window.matchMedia('(max-width:900px)').matches){
+      $('result').scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  }
+
+  function drawChart(r){
+    var host=$('chart');
+    var W=Math.max(280,Math.floor(host.clientWidth||320));
+    var H=Math.round(Math.min(340,Math.max(240,W*0.5)));
+    var m={l:12,r:12,t:38,b:52},pw=W-m.l-m.r,ph=H-m.t-m.b,base=m.t+ph;
+    var d=r.d,c=r.crit;
+    var xmax=Math.min(12,Math.ceil(Math.max(4,Math.abs(c)+1,Math.abs(r.stat)+0.8)));
+    var peak=d.pdf(0)*1.1;
+    function X(v){return m.l+(v+xmax)/(2*xmax)*pw;}
+    function Y(v){return base-(v/peak)*ph;}
+    var N=Math.max(120,Math.round(pw/2));
+    var curve='',i;
+    for(i=0;i<=N;i++){var x=-xmax+2*xmax*i/N;curve+=(i?'L':'M')+X(x).toFixed(1)+','+Y(d.pdf(x)).toFixed(1);}
+    function area(a,b){
+      if(b-a<=1e-9)return'';
+      var k=Math.max(2,Math.ceil((b-a)/(2*xmax)*N)),s='M'+X(a).toFixed(1)+','+base,j;
+      for(j=0;j<=k;j++){var xx=a+(b-a)*j/k;s+='L'+X(xx).toFixed(1)+','+Y(d.pdf(xx)).toFixed(1);}
+      return s+'L'+X(b).toFixed(1)+','+base+'Z';
+    }
+    var rej,keep,crits;
+    if(r.tail==='two'){rej=[[-xmax,-c],[c,xmax]];keep=[[-c,c]];crits=[-c,c];}
+    else if(r.tail==='right'){rej=[[c,xmax]];keep=[[-xmax,c]];crits=[c];}
+    else{rej=[[-xmax,c]];keep=[[c,xmax]];crits=[c];}
+
+    var ppu=pw/(2*xmax),step=ppu>=26?1:(ppu>=13?2:4),g='',tk='',v;
+    for(v=-xmax;v<=xmax;v++){
+      var gx=X(v).toFixed(1);
+      g+='<line x1="'+gx+'" x2="'+gx+'" y1="'+m.t+'" y2="'+base+'" class="g'+(v===0?' g0':'')+'"/>';
+      if(v%step===0)tk+='<text x="'+gx+'" y="'+(base+19)+'" text-anchor="middle">'+(v<0?MINUS+(-v):v)+'</text>';
+    }
+    for(i=1;i<=4;i++){
+      var gy=(base-ph*i/4).toFixed(1);
+      g+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+gy+'" y2="'+gy+'" class="g"/>';
+    }
+
+    var fills='';
+    keep.forEach(function(p){fills+='<path d="'+area(p[0],p[1])+'" class="fk"/>';});
+    rej.forEach(function(p){fills+='<path d="'+area(p[0],p[1])+'" class="fr"/>';});
+
+    var cl='';
+    crits.forEach(function(cv){
+      var cx=X(cv).toFixed(1),cy=Y(d.pdf(cv)).toFixed(1);
+      cl+='<line x1="'+cx+'" x2="'+cx+'" y1="'+cy+'" y2="'+base+'" class="cl"/>'
+        +'<polygon points="'+cx+','+(base+2)+' '+(+cx-5)+','+(base+9)+' '+(+cx+5)+','+(base+9)+'" class="ct"/>'
+        +'<text x="'+cx+'" y="'+(base+40)+'" text-anchor="middle" class="tc">'+fmt(cv)+'</text>';
+    });
+
+    var sv=Math.max(-xmax,Math.min(xmax,r.stat)),sx=X(sv),sy=Y(d.pdf(sv));
+    var lbl=(r.kind==='z'?'Z':'t')+' = '+fmt(r.stat),tw=lbl.length*7.2+6,anchor='middle',lx=sx;
+    if(sx-tw/2<4){anchor='start';lx=4;}
+    else if(sx+tw/2>W-4){anchor='end';lx=W-4;}
+    var st='<line x1="'+sx.toFixed(1)+'" x2="'+sx.toFixed(1)+'" y1="'+(m.t-10)+'" y2="'+base+'" class="sl"/>'
+      +'<circle cx="'+sx.toFixed(1)+'" cy="'+sy.toFixed(1)+'" r="4.5" class="dot"/>'
+      +'<text x="'+lx.toFixed(1)+'" y="'+(m.t-16)+'" text-anchor="'+anchor+'" class="ts">'+lbl+'</text>';
+
+    var name=r.kind==='z'?'normal estándar':'t de Student con '+r.df+' grados de libertad';
+    var aria='Curva de la distribución '+name+' con la región de rechazo sombreada. El estadístico '+fmt(r.stat)+(r.reject?' cae dentro':' queda fuera')+' de la región de rechazo.';
+    host.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" aria-label="'+esc(aria)+'">'
+      +g+fills+'<path d="'+curve+'" class="curve"/>'
+      +'<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+base+'" y2="'+base+'" class="ax"/>'
+      +tk+cl+st+'</svg>';
+  }
+
+  function setExample(){
+    var mode=val('mode');
+    document.getElementById('tail-two').checked=true;
+    document.getElementById('a5').checked=true;
+    if(mode==='mean'){
+      document.getElementById('known-yes').checked=true;
+      $('mu0').value='50';$('xbar').value='52.35';$('nMean').value='100';$('sd').value='10';
+    }else{
+      $('p0').value='0.50';$('xSucc').value='62';$('nProp').value='100';
+    }
+    updateLabels();updateHyp();updatePhat();
+    $('exnote').hidden=false;
+  }
+  function clearAll(){
+    ['mu0','xbar','nMean','sd','p0','xSucc','nProp'].forEach(function(id){$(id).value='';});
+    $('exnote').hidden=true;
+    updateHyp();updatePhat();
+    last=null;
+    showEmpty('',false);
+  }
+
+  var f=$('f');
+  f.addEventListener('submit',function(e){e.preventDefault();calc(true);});
+  function onEdit(){
+    $('exnote').hidden=true;
+    updateLabels();updateHyp();updatePhat();
+    if(!$('out').hidden){$('out').classList.add('stale');$('stale').hidden=false;}
+  }
+  f.addEventListener('input',onEdit);
+  f.addEventListener('change',onEdit);
+  $('ex').addEventListener('click',function(){setExample();calc(false);});
+  $('clr').addEventListener('click',clearAll);
+
+  var rafId=0;
+  function onResize(){
+    if(!last)return;
+    cancelAnimationFrame(rafId);
+    rafId=requestAnimationFrame(function(){if(last&&!$('out').hidden)drawChart(last);});
+  }
+  if(window.ResizeObserver){new ResizeObserver(onResize).observe($('chart'));}
+  else{window.addEventListener('resize',onResize);}
+
+  updateLabels();updateHyp();
+  setExample();
+  calc(false);
+})();
+</script>
+
+</body></html>
